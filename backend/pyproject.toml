@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sdl-color-lab"
+version = "1.0.0"
+description = "Local colour optimization API, algorithms, spectroscopy, and durable experiments"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "openai==2.29.0",
+    "botorch==0.16.1",
+    "torch==2.12.1",
+    # Opentrons requires NumPy <2; use the same environment for all components.
+    "numpy==1.26.4",
+    # This version is validated with the project's OT-2 API 2.28 protocol.
+    "opentrons==9.0.0",
+    "scipy==1.15.3",
+    "colour-science==0.4.6",
+    "python-dotenv==1.2.4",
+    "openpyxl==3.1.5",
+    "xlrd==2.0.2",
+    "fastapi==0.150.0",
+    "uvicorn==0.54.0",
+    "python-multipart==0.0.32",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sdl_color_lab"]

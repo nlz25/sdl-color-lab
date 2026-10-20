@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+.venv/
+.bootstrap-uv/
+node_modules/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+runtime/
+/visuals/
+releases/
+frontend/dist/
+backend/dist/
+.DS_Store
