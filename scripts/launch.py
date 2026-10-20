@@ -50,7 +50,7 @@ def uv_command():
             return [str(candidate)]
     if importlib.util.find_spec("uv") is not None:
         return [sys.executable, "-m", "uv"]
-    print("首次启动：在本项目独立环境中安装 uv。")
+    print("First launch: installing uv in an isolated environment inside this project.")
     bootstrap = ROOT / ".bootstrap-uv"
     subprocess.run([sys.executable, "-m", "venv", str(bootstrap)], check=True)
     python = bootstrap / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
@@ -59,26 +59,26 @@ def uv_command():
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="启动 SDL Color Lab 本地页面")
+    parser = argparse.ArgumentParser(description="Start the SDL Color Lab local page")
     parser.add_argument("--port", type=int, default=8501)
     parser.add_argument("--no-browser", action="store_true")
     args = parser.parse_args(argv)
     if not 1 <= args.port <= 65535:
-        parser.error("端口必须在 1–65535 之间")
+        parser.error("Port must be between 1 and 65535")
     url = f"http://127.0.0.1:{args.port}"
     if is_our_server(health(url)):
-        print(f"SDL Color Lab 已在运行：{url}")
+        print(f"SDL Color Lab is already running at {url}")
         if not args.no_browser:
             webbrowser.open(url)
         return 0
     with socket.socket() as probe:
         if probe.connect_ex(("127.0.0.1", args.port)) == 0:
             raise OSError(
-                f"端口 {args.port} 已被另一服务占用。请关闭旧服务，"
-                "或使用 --port 指定其他端口。不会自动复用旧项目。"
+                f"Port {args.port} is in use by another service. Stop that service "
+                "or choose another port with --port. A server from another project will not be reused."
             )
     if not (ROOT / "frontend/dist/index.html").is_file():
-        raise OSError("缺少前端构建文件，请运行 python scripts/build_frontend.py。")
+        raise OSError("Frontend build not found. Run python scripts/build_frontend.py first.")
     uv = uv_command()
     backend = str(ROOT / "backend")
     env = {
@@ -86,14 +86,14 @@ def main(argv=None):
         "COLOR_LAB_PROJECT_ROOT": str(ROOT),
         "PYTHONDONTWRITEBYTECODE": "1",
     }
-    print("检查锁定依赖；首次启动需要联网下载 Python 与依赖。")
+    print("Checking locked dependencies; the first launch needs internet access to download Python and packages.")
     subprocess.run(
         [*uv, "sync", "--project", backend, "--locked", "--no-dev"],
         check=True,
         cwd=ROOT,
         env=env,
     )
-    print(f"正在启动 SDL Color Lab：{url}", flush=True)
+    print(f"Starting SDL Color Lab at {url}", flush=True)
     process = subprocess.Popen(
         [
             *uv,
@@ -142,5 +142,5 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except (OSError, subprocess.CalledProcessError) as exc:
-        print(f"启动失败：{exc}", file=sys.stderr)
+        print(f"Startup failed: {exc}", file=sys.stderr)
         raise SystemExit(1)

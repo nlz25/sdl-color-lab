@@ -6,4 +6,7 @@ if %errorlevel% equ 0 (
 ) else (
   python scripts\launch.py
 )
-if errorlevel 1 pause
+if errorlevel 1 (
+  echo Startup failed. Press any key to close this window.
+  pause >nul
+)

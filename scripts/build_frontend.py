@@ -11,7 +11,7 @@ def main():
     npm = shutil.which("npm")
     if not npm:
         raise SystemExit(
-            "请先安装 Node.js 22.12 或更新版本（正常使用交付包无需 Node）。"
+            "Install Node.js 22.12 or newer to build the frontend. A built copy does not need Node.js for daily operation."
         )
     for command in (["ci"], ["run", "build"]):
         subprocess.run([npm, *command], cwd=ROOT / "frontend", check=True)
