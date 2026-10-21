@@ -7,7 +7,7 @@ function DownloadIcon() {
   return <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2v8m-3-3 3 3 3-3M3 10v4h10v-4" /></svg>;
 }
 
-export default function OpentronsDownloads({ pending, sessionId, recipeFile }) {
+export default function OpentronsDownloads({ pending, sessionId, recipeFile, desktopFiles = true }) {
   const { t } = useI18n();
   const [opening, setOpening] = useState(false);
   const [error, setError] = useState("");
@@ -20,11 +20,11 @@ export default function OpentronsDownloads({ pending, sessionId, recipeFile }) {
   }
   return <div className={`robot-files${pending ? "" : " protocol-only"}`}>
     <div className="robot-downloads">
-      {pending && <button className="secondary" type="button" disabled={opening} onClick={openFolder}>{t(opening ? "opentrons.opening" : "opentrons.openFolder")}<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 5V3h4l2 2h6v8H2V5Z" /></svg></button>}
+      {pending && (desktopFiles ? <button className="secondary" type="button" disabled={opening} onClick={openFolder}>{t(opening ? "opentrons.opening" : "opentrons.openFolder")}<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 5V3h4l2 2h6v8H2V5Z" /></svg></button> : <a className="secondary" href={sessionsApi.recipeUrl(sessionId, pending.method, pending.round)}>{t("recipe.download")}<DownloadIcon /></a>)}
       <a className={pending ? "secondary" : "text-button"} href={sessionsApi.protocolUrl}>{t("opentrons.downloadScript")}{pending && <DownloadIcon />}</a>
     </div>
-    {pending && <p className="robot-saved"><span>{t("opentrons.saved")}</span> <a href={sessionsApi.recipeUrl(sessionId, pending.method, pending.round)} title={recipeFile?.path}>{recipeFile?.filename || t("recipe.download")}</a>{recipeFile && <code>{recipeFile.display_directory}</code>}</p>}
-    <p className="micro">{t("opentrons.hint")}</p>
+    {pending && <p className="robot-saved"><span>{t(desktopFiles ? "opentrons.saved" : "opentrons.savedServer")}</span> {desktopFiles ? <a href={sessionsApi.recipeUrl(sessionId, pending.method, pending.round)} title={recipeFile?.path}>{recipeFile?.filename || t("recipe.download")}</a> : <span>{recipeFile?.filename || t("recipe.download")}</span>}{desktopFiles && recipeFile && <code>{recipeFile.display_directory}</code>}</p>}
+    <p className="micro">{t(desktopFiles ? "opentrons.hint" : "opentrons.serverHint")}</p>
     <ErrorNotice>{error}</ErrorNotice>
   </div>;
 }

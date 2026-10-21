@@ -31,6 +31,12 @@ def load_environment() -> None:
     load_dotenv(environment_file(), override=False)
 
 
+def public_origin() -> str | None:
+    """An explicitly configured HTTPS/HTTP origin enables server operation."""
+    load_environment()
+    return os.getenv("COLOR_LAB_PUBLIC_ORIGIN", "").strip() or None
+
+
 def session_directory() -> Path:
     # Preserve the old variable's meaning: it points to sessions, not runtime.
     load_environment()

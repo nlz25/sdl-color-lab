@@ -36,6 +36,8 @@ To use another port, run `python3 scripts/launch.py --port 8502` on macOS, or `p
 
 The page opens in **English**. Use **EN / ZH** at the top right to switch languages without losing the current upload or experiment. Refreshing returns to English. The experiment selector prefixes each record with its selected method: **BO-EI** or the configured GPT model ID.
 
+**Server operation.** A cloud deployment uses the same workflow. Set `COLOR_LAB_PUBLIC_ORIGIN` to the exact public origin (for example, `https://your-server-address`, without a trailing slash) and keep the backend behind an HTTPS reverse proxy that preserves the request Host and Origin. Keep `.env` on the server for the backend only. The cloud page downloads each recipe CSV to the operator's computer instead of opening a server folder; experiment progress and original uploads are stored on the server.
+
 ## 2. Prepare a live experiment
 
 **Model configuration.** For GPT, copy [.env.example](.env.example) to `.env` in the same folder. Fill in `OPENAI_API_KEY`, the actual available `OPENAI_MODEL`, and `OPENAI_BASE_URL` if using a compatible endpoint. Restart the service after editing. Finder shows hidden files with **Command + Shift + .**. The page checks the connection when GPT is first selected. BO can run without an API key or GPT connection. The GPT model ID and endpoint are fixed when the experiment is created; create a new experiment if changing them.

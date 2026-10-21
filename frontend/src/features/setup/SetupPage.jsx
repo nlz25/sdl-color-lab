@@ -25,7 +25,7 @@ export default function SetupPage({ bootstrap, onCreated }) {
     {method === "llm" && !model.api_key_configured && !model.error && <p className="micro">{t("setup.configure")}</p>}
     {method === "llm" && <ErrorNotice>{model.error}</ErrorNotice>}
     <ErrorNotice>{error}</ErrorNotice>
-    <OpentronsDownloads />
+    <OpentronsDownloads desktopFiles={bootstrap.capabilities?.open_local_folder !== false} />
     <div className="setup-footer"><small>{t("setup.budget")}</small><button className="primary" onClick={start} disabled={!ready || Boolean(working)}>{t(working === "start" ? "setup.starting" : "setup.start", { method: METHODS[method] })}<span>→</span></button></div>
   </main>;
 }

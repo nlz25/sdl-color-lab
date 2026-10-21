@@ -124,6 +124,11 @@ def _same_origin_with_portless_header(
 
 def create_app(data_dir: str | Path | None = None, dist_dir: str | Path | None = None):
     app = FastAPI(title="配色实验", docs_url=None, redoc_url=None, openapi_url=None)
+    public_url = settings.public_origin()
+    public_origin = _origin_tuple(public_url) if public_url else None
+    if public_url and public_origin is None:
+        raise ValueError("COLOR_LAB_PUBLIC_ORIGIN must be a single http(s) origin without a path")
+    desktop_files = public_origin is None
     store = Path(data_dir or settings.session_directory()).resolve()
     cache_root = storage.cache_directory(store)
     upload_root = cache_root / "uploads"
@@ -140,7 +145,11 @@ def create_app(data_dir: str | Path | None = None, dist_dir: str | Path | None =
             port = request.url.port
         except ValueError:
             host, port = None, None
-        if host not in {"localhost", "127.0.0.1", "::1"}:
+        request_origin = (
+            request.url.scheme, host,
+            port if port is not None else (443 if request.url.scheme == "https" else 80),
+        )
+        if host not in {"localhost", "127.0.0.1", "::1"} and request_origin != public_origin:
             return JSONResponse({"detail": "仅允许通过本机地址访问"}, status_code=403)
         if request.method not in {"GET", "HEAD", "OPTIONS"}:
             port = (
@@ -349,6 +358,7 @@ def create_app(data_dir: str | Path | None = None, dist_dir: str | Path | None =
             "import_profiles": profiles(),
             "default_target": sessions.DEFAULT_TARGET,
             "initialization_mode": "cold_start",
+            "capabilities": {"open_local_folder": desktop_files},
         }
 
     @app.post("/api/preflight")
@@ -548,6 +558,8 @@ def create_app(data_dir: str | Path | None = None, dist_dir: str | Path | None =
     @app.post("/api/sessions/{identifier}/opentrons/open-folder")
     @serialize_operation
     def open_opentrons_folder(identifier: str, body: MethodAction):
+        if not desktop_files:
+            raise HTTPException(403, "Folder access is unavailable on the server. Download the CSV instead.")
         return sessions.open_robot_folder(
             session_path(identifier), method=body.method, round_number=body.round_number
         )

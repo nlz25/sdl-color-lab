@@ -36,6 +36,8 @@ py -3 scripts\build_frontend.py
 
 页面默认**英文**，右上角 **EN / ZH** 可切换，当前上传和实验进度保留。刷新后恢复英文。实验下拉列表以当前所选方法为前缀：**BO-EI** 或配置的 GPT 模型 ID。
 
+**服务器运行。** 云端采用相同实验流程。将 `COLOR_LAB_PUBLIC_ORIGIN` 设置为准确的公网来源（例如 `https://your-server-address`，末尾不加斜杠），后端置于保留请求 Host、Origin 的 HTTPS 反向代理之后。`.env` 只放在服务器上供后端读取。云端页面将每轮配方 CSV 下载到实验员电脑，不打开服务器文件夹；实验进度和原始上传文件保存在服务器。
+
 ## 2. 准备正式实验
 
 **模型配置。** 使用 GPT 时，将同目录 [.env.example](.env.example) 复制为 `.env`，填写 `OPENAI_API_KEY`、实际可用的 `OPENAI_MODEL`；使用兼容接口时另填 `OPENAI_BASE_URL`。修改后重启服务。Finder 按 **Command + Shift + .** 显示隐藏文件。首次选择 GPT 时，页面自动检查模型连接；BO 无需密钥，也无需先连接 GPT。GPT 模型标识和接口地址在创建实验时固定，变更时请新建实验。
