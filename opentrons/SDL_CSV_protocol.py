@@ -12,6 +12,8 @@ No modules are required; the P300 pipette performs the final mix.
 Pipettes: left P20 and right P300, both single-channel.
 Sources: A3 water, A4 red, B3 green, B4 blue. The inherited assumptions of 45 mL
 initial volume and aspiration 40 mm above the tube bottom are unverified on site.
+Both pipettes use that source-bottom position for all ingredients and pre-wetting.
+Final mixing is separate and remains 2 mm above the destination well bottom.
 Confirm liquid levels, tip reach and labware offsets; simulation cannot verify them.
 Skip 0 uL; use P20 for 1..20 uL and P300 above 20 uL.
 Use a fresh tip for each transfer and for the final mix.
@@ -46,6 +48,11 @@ SOURCE_INITIAL_UL = 45000.0
 SOURCE_RESERVE_UL = 1000.0
 
 SOURCE_ASPIRATE_Z_MM = 40.0
+
+SOURCE_ASPIRATE_POSITION = {
+    "position_reference": "well-bottom",
+    "offset": {"x": 0, "y": 0, "z": SOURCE_ASPIRATE_Z_MM},
+}
 
 DEST_DISPENSE_Z_MM = 2.0
 
@@ -91,7 +98,7 @@ EXAMPLE_CSV = """iteration,execution_index,recipe_id,replicate,well,water_ul,red
 1,1,R001,1,A1,50,50,50,50
 """
 
-TRANSFER_PROPERTIES = {'aspirate': {'aspirate_position': {'offset': {'x': 0, 'y': 0, 'z': 40}, 'position_reference': 'well-bottom'}, 'flow_rate_by_volume': [[0, 100]], 'pre_wet': True, 'correction_by_volume': [[0, 0]], 'delay': {'enabled': False}, 'mix': {'enabled': False}, 'submerge': {'delay': {'enabled': False}, 'speed': 35, 'start_position': {'offset': {'x': 0, 'y': 0, 'z': 2}, 'position_reference': 'well-top'}}, 'retract': {'air_gap_by_volume': [[0, 0]], 'delay': {'enabled': False}, 'end_position': {'offset': {'x': 0, 'y': 0, 'z': 2}, 'position_reference': 'well-top'}, 'speed': 35, 'touch_tip': {'enabled': False}}}, 'dispense': {'dispense_position': {'offset': {'x': 0, 'y': 0, 'z': 2}, 'position_reference': 'well-bottom'}, 'flow_rate_by_volume': [[0, 100]], 'delay': {'enabled': False}, 'submerge': {'delay': {'enabled': False}, 'speed': 35, 'start_position': {'offset': {'x': 0, 'y': 0, 'z': 2}, 'position_reference': 'well-top'}}, 'retract': {'air_gap_by_volume': [[0, 0]], 'delay': {'enabled': False}, 'end_position': {'offset': {'x': 0, 'y': 0, 'z': 2}, 'position_reference': 'well-top'}, 'speed': 35, 'touch_tip': {'enabled': False}, 'blowout': {'enabled': False}}, 'correction_by_volume': [[0, 0]], 'push_out_by_volume': [[0, 0]], 'mix': {'enabled': False}}}
+TRANSFER_PROPERTIES = {'aspirate': {'aspirate_position': SOURCE_ASPIRATE_POSITION, 'flow_rate_by_volume': [[0, 100]], 'pre_wet': True, 'correction_by_volume': [[0, 0]], 'delay': {'enabled': False}, 'mix': {'enabled': False}, 'submerge': {'delay': {'enabled': False}, 'speed': 35, 'start_position': {'offset': {'x': 0, 'y': 0, 'z': 2}, 'position_reference': 'well-top'}}, 'retract': {'air_gap_by_volume': [[0, 0]], 'delay': {'enabled': False}, 'end_position': {'offset': {'x': 0, 'y': 0, 'z': 2}, 'position_reference': 'well-top'}, 'speed': 35, 'touch_tip': {'enabled': False}}}, 'dispense': {'dispense_position': {'offset': {'x': 0, 'y': 0, 'z': 2}, 'position_reference': 'well-bottom'}, 'flow_rate_by_volume': [[0, 100]], 'delay': {'enabled': False}, 'submerge': {'delay': {'enabled': False}, 'speed': 35, 'start_position': {'offset': {'x': 0, 'y': 0, 'z': 2}, 'position_reference': 'well-top'}}, 'retract': {'air_gap_by_volume': [[0, 0]], 'delay': {'enabled': False}, 'end_position': {'offset': {'x': 0, 'y': 0, 'z': 2}, 'position_reference': 'well-top'}, 'speed': 35, 'touch_tip': {'enabled': False}, 'blowout': {'enabled': False}}, 'correction_by_volume': [[0, 0]], 'push_out_by_volume': [[0, 0]], 'mix': {'enabled': False}}}
 TIPS_PER_ROUND = 5
 
 
@@ -190,7 +197,9 @@ def read_recipe_table(protocol):
 def make_transfer_class(protocol, pipette_name, tip_uri, aspirate_rate, dispense_rate):
     """Keep exported liquid-handling settings and apply pipette-specific flow rates."""
     properties = deepcopy(TRANSFER_PROPERTIES)
-    properties["aspirate"]["aspirate_position"]["offset"]["z"] = SOURCE_ASPIRATE_Z_MM
+    # Override the complete position so every source aspiration, including
+    # pre-wetting, is bottom-referenced for both P20 and P300.
+    properties["aspirate"]["aspirate_position"] = deepcopy(SOURCE_ASPIRATE_POSITION)
     properties["dispense"]["dispense_position"]["offset"]["z"] = DEST_DISPENSE_Z_MM
     properties["aspirate"]["flow_rate_by_volume"] = [(0, aspirate_rate)]
     properties["dispense"]["flow_rate_by_volume"] = [(0, dispense_rate)]
@@ -240,7 +249,11 @@ def run(protocol: protocol_api.ProtocolContext) -> None:
         source.load_liquid(wells=[SOURCE_WELLS[key]], liquid=liquid, volume=SOURCE_INITIAL_UL)
     target = plate[recipe["well"]]
     protocol.comment(f"Iteration={recipe['iteration']} execution_index={recipe['execution_index']} recipe={recipe['recipe_id']} target={recipe['well']} tips={tip_counts} start_tip={start}.")
-    protocol.comment("Source aspiration z=40 mm is inherited and UNVERIFIED. Confirm liquid level and tip reach before robot use.")
+    protocol.comment(
+        f"All source aspiration and pre-wetting: bottom + {SOURCE_ASPIRATE_Z_MM:g} mm "
+        "(water/red/green/blue, P20/P300). Inherited and UNVERIFIED: "
+        "confirm liquid level and tip reach before robot use."
+    )
     # One destination well per run; no replicates or loop over experiment rounds.
     for key in INGREDIENTS:
         volume = recipe[key]
@@ -256,7 +269,10 @@ def run(protocol: protocol_api.ProtocolContext) -> None:
             new_tip="never", trash_location=protocol.fixed_trash,
         )
         pipette.drop_tip()
-    protocol.comment(f"STAGE: mix {recipe['well']} after all components have been added")
+    protocol.comment(
+        f"STAGE: mix {recipe['well']} at destination bottom + {MIX_Z_MM:g} mm "
+        "after all components have been added"
+    )
     p300.pick_up_tip()
     p300.mix(
         repetitions=MIX_REPETITIONS, volume=MIX_VOLUME_UL,
