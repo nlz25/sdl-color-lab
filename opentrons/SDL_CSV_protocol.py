@@ -7,8 +7,8 @@ and does not indicate chronological execution order. Either method may run first
 GPT uses A1..A6; BO uses B1..B6. Re-downloading keeps the same tip block.
 Do not rerun a CSV that has already been executed.
 
-Deck: plate 7, source rack 8, P300 tips 4, P20 tips 5, fixed Heater-Shaker 10;
-leave slot 11 empty. Declare the module for deck analysis; do not heat or shake.
+Deck: plate 7, source rack 8, P300 tips 10, P20 tips 11.
+No modules are required; the P300 pipette performs the final mix.
 Pipettes: left P20 and right P300, both single-channel.
 Sources: A3 water, A4 red, B3 green, B4 blue. The inherited assumptions of 45 mL
 initial volume and aspiration 40 mm above the tube bottom are unverified on site.
@@ -71,11 +71,9 @@ PLATE_SLOT = "7"
 
 SOURCE_SLOT = "8"
 
-P300_TIPS_SLOT = "4"
+P300_TIPS_SLOT = "10"
 
-P20_TIPS_SLOT = "5"
-
-HEATER_SHAKER_SLOT = "10"
+P20_TIPS_SLOT = "11"
 
 TIP_ORDER = tuple(f"{r}{c}" for c in range(1, 13) for r in "ABCDEFGH")
 
@@ -207,8 +205,6 @@ def run(protocol: protocol_api.ProtocolContext) -> None:
         raise ValueError("Mix volume exceeds sample volume or P300 capacity.")
     if not isinstance(MIX_REPETITIONS, int) or MIX_REPETITIONS < 1:
         raise ValueError("MIX_REPETITIONS must be a positive integer.")
-    # The fixed module must be represented even though this protocol does not use it.
-    protocol.load_module("heaterShakerModuleV1", HEATER_SHAKER_SLOT)
     tips20 = protocol.load_labware(
         "opentrons_96_tiprack_20ul", P20_TIPS_SLOT,
         label="Opentrons 20 uL Tips", namespace="opentrons", version=1,
