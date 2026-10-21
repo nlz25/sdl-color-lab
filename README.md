@@ -73,16 +73,16 @@ This one Python protocol defines the pipettes, source positions, transfers and m
 | Item | Required setup |
 |---|---|
 | Pipettes | Left: `p20_single_gen2`; right: `p300_single_gen2`, both single-channel |
-| Slot 4 | `opentrons_96_tiprack_300ul` |
-| Slot 5 | `opentrons_96_tiprack_20ul` |
+| Slot 10 | `opentrons_96_tiprack_300ul` |
+| Slot 11 | `opentrons_96_tiprack_20ul` |
 | Slot 7 | `corning_96_wellplate_360ul_flat` |
 | Slot 8 | `opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical` |
-| Slot 10 / 11 | Fixed Heater-Shaker present, heating/shaking unused / leave empty |
+| Modules | None required; the P300 pipette performs mixing |
 | Source rack positions | A3 water; A4 red; B3 green; B4 blue, using the four 50 mL tube positions |
 
 For a two-model comparison using two separate experiments, start with the first **60 positions unused in each tip rack**, and keep the racks in place across the twelve executions. The protocol reserves five positions per pipette per execution.
 
-**Before liquid handling:** the current code assumes **45 mL initially per source tube** and aspirates **40 mm above the tube bottom**. These inherited values have not been verified on the physical setup. The robot operator must confirm liquid levels, tip reach and labware offsets, and adjust/reanalyse the protocol if necessary. Mixing is **100 µL once**, 2 mm above the well bottom; verify that it gives a uniform sample in the actual plate. Command-line simulation has passed; it does not replace the on-site App analysis and liquid trial.
+**Before liquid handling:** the current code assumes **45 mL initially per source tube** and aspirates **40 mm above the tube bottom**. Both P20 and P300 use this bottom-referenced position for all water/red/green/blue source transfers, including pre-wetting. These inherited values have not been verified on the physical setup. The robot operator must confirm liquid levels, tip reach and labware offsets, and adjust/reanalyse the protocol if necessary. Final destination-well mixing is separate: **100 µL once**, **2 mm above the well bottom**; do not apply the source's 40 mm setting to this mix. Verify that mixing gives a uniform sample in the actual plate. Re-import and analyse the protocol after changing the deck layout or liquid-handling settings. Command-line simulation does not replace the on-site App analysis and liquid trial.
 
 ## 4. Repeat this cycle for every candidate
 
