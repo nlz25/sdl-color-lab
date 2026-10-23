@@ -1,24 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { spectraApi } from "../../api/spectra.js";
 
-/** One CSV is one spectrum; the upload card fixes its reagent/current well. */
+/** Extract only the current well; ambiguous scans require an explicit choice. */
 export function useSpectrumSelection({ expectedWell, defaultWell, target, onReady }) {
   const [upload, setUpload] = useState(null);
   const [extracted, setExtracted] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [error, setError] = useState("");
+  const [selectedBlockId, setSelectedBlockId] = useState("");
   const uploadRequest = useRef({ revision: 0, controller: null });
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
   const well = expectedWell || defaultWell;
-  const block = upload?.blocks?.length === 1 ? upload.blocks[0] : null;
+  const blocks = (upload?.blocks || []).filter((item) => item.orientation === "csv" || item.wells?.includes(well));
+  const block = blocks.length === 1 ? blocks[0] : blocks.find((item) => item.block_id === selectedBlockId) || null;
   const selectionKey = JSON.stringify([upload?.upload_id, block, well, target || null]);
   const spectrum = extracted?.key === selectionKey ? extracted.spectrum : null;
 
   const installUpload = useCallback((item) => {
-    setUpload(item); setExtracted(null);
-    setError(item.blocks?.length === 1 ? "" : "请上传只有波长、吸光度两列的单孔 CSV。");
+    setUpload(item); setExtracted(null); setSelectedBlockId("");
+    setError(item.blocks?.length ? "" : "error.noScans");
   }, []);
 
   useEffect(() => () => {
@@ -32,8 +34,8 @@ export function useSpectrumSelection({ expectedWell, defaultWell, target, onRead
     const revision = ++uploadRequest.current.revision;
     setUpload(null); setExtracted(null); setError("");
     setUploading(false);
-    if (!/\.csv$/i.test(file.name)) {
-      setError("请上传两列光谱 CSV，例如 base_Blue.csv。");
+    if (!/\.(csv|xlsx|xls)$/i.test(file.name)) {
+      setError("error.spectrumFormat");
       return;
     }
     const controller = new AbortController();
@@ -67,8 +69,10 @@ export function useSpectrumSelection({ expectedWell, defaultWell, target, onRead
   }, [selectionKey]);
 
   useEffect(() => {
-    onReadyRef.current?.(spectrum ? { upload_id: upload.upload_id, block, well, spectrum } : null);
+    onReadyRef.current?.(spectrum?.ready_for_rgb ? { upload_id: upload.upload_id, block, well, spectrum } : null);
   }, [selectionKey, spectrum]);
 
-  return { upload, spectrum, working: uploading || parsing, error, uploadFile };
+  return { upload, spectrum, blocks, block, selectedBlockId, selectBlock: setSelectedBlockId,
+    normalizedUrl: spectrum ? spectraApi.normalizedUrl(upload.upload_id, block, well) : null,
+    working: uploading || parsing, error, uploadFile };
 }

@@ -21,7 +21,7 @@ import re
 from datetime import date, datetime
 from pathlib import Path
 
-from sdl_color_lab.spectra.spectrum_to_rgb import absorbance_to_color
+from sdl_color_lab.spectra.spectrum_to_rgb import absorbance_to_color, colour_band_indices
 
 CSV_SHEET = "__csv__"
 ORIENTATIONS = ("wells_rows", "wells_columns")
@@ -72,7 +72,14 @@ def load_workbook_data(raw: bytes, filename: str) -> dict[str, list[list]]:
     try:
         if suffix == ".csv":
             text = raw.decode("utf-8-sig")
-            return {CSV_SHEET: list(csv.reader(io.StringIO(text, newline="")))}
+            header = next((line for line in text.splitlines() if line.strip()), "")
+            # Tecan's European export separates columns with semicolons and uses
+            # decimal commas. Do not let a decimal comma split an OD value.
+            delimiter = ";" if ";" in header else "\t" if "\t" in header else ","
+            rows = list(csv.reader(io.StringIO(text, newline=""), delimiter=delimiter))
+            while rows and not any(cell.strip() for cell in rows[0]):
+                rows.pop(0)
+            return {CSV_SHEET: rows}
         if suffix == ".xlsx":
             from openpyxl import load_workbook
 
@@ -138,6 +145,10 @@ def _is_empty(value: object) -> bool:
 def _number(value: object, description: str) -> float:
     if isinstance(value, bool) or _is_empty(value):
         raise ValueError(f"{description}缺失或不是有效数字。")
+    if isinstance(value, str):
+        value = value.strip()
+        if re.fullmatch(r"[+-]?(?:\d+,\d+|,\d+)(?:[eE][+-]?\d+)?", value):
+            value = value.replace(",", ".")
     try:
         result = float(value)
     except (TypeError, ValueError) as exc:
@@ -289,20 +300,19 @@ def discover_blocks(sheets: dict[str, list[list]]) -> list[dict]:
     """Discover explicit well/wavelength tables, never choose a scan for caller."""
     if set(sheets) == {CSV_SHEET}:
         rows = sheets[CSV_SHEET]
-        if not rows or tuple(rows[0]) not in _CSV_HEADERS:
-            raise ValueError(
-                "CSV 表头须为 wavelength_nm,absorbance 或 Wavelength(nm),OD Value。"
-            )
-        return [
-            {
-                "sheet": CSV_SHEET,
-                "orientation": "csv",
-                "id": "csv",
-                "block_id": "csv",
-                "wells": [],
-                "label": "单孔 CSV（需绑定孔号）",
-            }
-        ]
+        if not rows:
+            raise ValueError("上传文件为空")
+        if tuple(cell.strip() for cell in rows[0]) in _CSV_HEADERS:
+            return [
+                {
+                    "sheet": CSV_SHEET,
+                    "orientation": "csv",
+                    "id": "csv",
+                    "block_id": "csv",
+                    "wells": [],
+                    "label": "单孔 CSV（需绑定孔号）",
+                }
+            ]
     blocks = []
     for sheet_name, rows in sheets.items():
         for header, row in enumerate(rows):
@@ -359,7 +369,10 @@ def discover_blocks(sheets: dict[str, list[list]]) -> list[dict]:
                         )
     # Multiple axes may represent distinct tables. Preserve their identity and
     # require the user to resolve that ambiguity rather than picking the first.
-    return list({block["id"]: block for block in blocks}.values())
+    discovered = list({block["id"]: block for block in blocks}.values())
+    if not discovered and set(sheets) == {CSV_SHEET}:
+        raise ValueError("CSV 须包含波长、吸光度两列，或带明确孔号与波长表头的 Tecan 多孔表格。")
+    return discovered
 
 
 def _timestamp(rows: list[list], block: dict) -> str | None:
@@ -420,11 +433,13 @@ def _validated_color(wavelengths: list[float], absorbance: list[float]) -> dict:
     gaps = [right - left for left, right in zip(wavelengths, wavelengths[1:])]
     if any(gap <= 0 for gap in gaps):
         raise ValueError("波长必须严格递增且不能重复；请检查扫描区域和排列方向。")
-    if any(gap > 10 for gap in gaps):
+    band = colour_band_indices(wavelengths)
+    band_waves = [wavelengths[index] for index in band]
+    if any(right - left > 10 for left, right in zip(band_waves, band_waves[1:])):
         raise ValueError("实测波长间距不能超过 10 nm。")
     if wavelengths[0] > 380 or wavelengths[-1] < 780:
         raise ValueError("光谱必须完整覆盖 380–780 nm。")
-    if any(value < 0 for value in absorbance):
+    if any(absorbance[index] < 0 for index in band):
         raise ValueError("吸光度包含负值，请核对仪器的纯水／孔板背景处理。")
     return absorbance_to_color(wavelengths, absorbance)
 
@@ -435,6 +450,8 @@ def extract_spectrum(
     block: dict,
     well: str,
     expected_well: str | None = None,
+    *,
+    require_color: bool = True,
 ) -> dict:
     """Extract, validate and convert exactly one explicitly identified well."""
     requested_well = normalize_well(well)
@@ -449,12 +466,12 @@ def extract_spectrum(
             raise ValueError("CSV 映射不能用于 Excel 文件。")
         canonical = discover_blocks(sheets)[0]
         rows = sheets[CSV_SHEET]
-        wavelengths, absorbance = [], []
+        wavelengths, values = [], []
         for index, row in enumerate(rows[1:], start=2):
             if len(row) != 2:
                 raise ValueError(f"CSV 第 {index} 行必须恰好包含波长和吸光度两列。")
             wavelengths.append(_wavelength(row[0], f"CSV 第 {index} 行波长"))
-            absorbance.append(_number(row[1], f"CSV 第 {index} 行吸光度"))
+            values.append(row[1])
         source_well = None  # A two-column file cannot independently attest a well.
         mapping = {"sheet": CSV_SHEET, "orientation": "csv"}
     else:
@@ -484,13 +501,7 @@ def extract_spectrum(
                 )
                 for col in range(first, last + 1)
             ]
-            absorbance = [
-                _number(
-                    _cell(rows, selected_row, col),
-                    f"孔 {requested_well} 第 {col + 1} 列吸光度",
-                )
-                for col in range(first, last + 1)
-            ]
+            values = [_cell(rows, selected_row, col) for col in range(first, last + 1)]
         else:
             matches = [
                 index
@@ -506,16 +517,44 @@ def extract_spectrum(
                 _wavelength(_cell(rows, row, axis), f"第 {row + 1} 行波长")
                 for row in range(start, end + 1)
             ]
-            absorbance = [
-                _number(
-                    _cell(rows, row, selected_col),
-                    f"孔 {requested_well} 第 {row + 1} 行吸光度",
-                )
-                for row in range(start, end + 1)
-            ]
+            values = [_cell(rows, row, selected_col) for row in range(start, end + 1)]
         acquired_at = _timestamp(rows, canonical)
-    color = _validated_color(wavelengths, absorbance)
+    if len(wavelengths) < 2:
+        raise ValueError("光谱至少需要两个波长点。")
     gaps = [right - left for left, right in zip(wavelengths, wavelengths[1:])]
+    if any(gap <= 0 for gap in gaps):
+        raise ValueError("波长必须严格递增且不能重复。")
+    original_range = [wavelengths[0], wavelengths[-1]]
+    original_count = len(wavelengths)
+    needed = set(colour_band_indices(wavelengths).tolist())
+    valid_waves, absorbance, ignored = [], [], []
+    for index, (wave, value) in enumerate(zip(wavelengths, values)):
+        try:
+            number = _number(value, f"孔 {requested_well} 波长 {wave:g} nm 的吸光度")
+        except ValueError:
+            # An explicit OVER outside the integration band is irrelevant to the
+            # colour calculation. Preserve it in provenance; never replace it.
+            if index not in needed and isinstance(value, str) and value.strip().upper() == "OVER":
+                ignored.append({"wavelength_nm": wave, "value": value})
+                continue
+            raise
+        valid_waves.append(wave)
+        absorbance.append(number)
+    wavelengths = valid_waves
+    conversion_error = None
+    try:
+        color = _validated_color(wavelengths, absorbance)
+    except ValueError as exc:
+        if require_color:
+            raise
+        color, conversion_error = None, str(exc)
+    instrument = next(
+        (value.split(":", 1)[1].strip()
+         for row in sheets[canonical["sheet"]][:28]
+         for value in row
+         if isinstance(value, str) and value.strip().lower().startswith("device:")),
+        None,
+    )
     return {
         "well": requested_well,
         "source_well": source_well,
@@ -523,6 +562,12 @@ def extract_spectrum(
         "wavelength_nm": wavelengths,
         "absorbance": absorbance,
         "color": color,
+        "ready_for_rgb": color is not None,
+        "conversion_error": conversion_error,
+        "instrument": instrument,
+        "original_wavelength_range_nm": original_range,
+        "original_sample_count": original_count,
+        "ignored_outside_colour_band": ignored,
         "source_sha256": hashlib.sha256(raw).hexdigest(),
         "spectrum_sha256": _hash_json(
             {
@@ -539,3 +584,13 @@ def extract_spectrum(
         "sampling_interval_nm": gaps[0] if len(set(gaps)) == 1 else None,
         "max_sampling_interval_nm": max(gaps),
     }
+
+
+def normalized_csv(spectrum: dict) -> str:
+    """Write measured numeric points only, with invariant decimal formatting."""
+    stream = io.StringIO(newline="")
+    writer = csv.writer(stream, lineterminator="\n")
+    writer.writerow(("wavelength_nm", "absorbance"))
+    for wave, absorbance in zip(spectrum["wavelength_nm"], spectrum["absorbance"]):
+        writer.writerow((format(wave, ".17g"), format(absorbance, ".17g")))
+    return stream.getvalue()

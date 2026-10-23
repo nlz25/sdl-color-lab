@@ -388,6 +388,34 @@ def create_app(data_dir: str | Path | None = None, dist_dir: str | Path | None =
             parsed["delta_e_2000"] = delta_e(parsed["color"]["rgb"], body.target_rgb)
         return parsed
 
+    @app.post("/api/uploads/{identifier}/prepare")
+    def prepare_spectrum(identifier: str, body: SpectrumSelection):
+        raw, filename = upload_files(identifier)
+        parsed = spectrum_import.extract_spectrum(
+            raw, filename, body.block, body.well, body.expected_well,
+            require_color=False,
+        )
+        if parsed["ready_for_rgb"] and body.target_rgb is not None:
+            from sdl_color_lab.core.common import validate_rgb
+
+            validate_rgb(body.target_rgb)
+            parsed["delta_e_2000"] = delta_e(parsed["color"]["rgb"], body.target_rgb)
+        return parsed
+
+    @app.get("/api/uploads/{identifier}/spectrum.csv")
+    def normalized_spectrum(identifier: str, block_id: str, well: str):
+        raw, filename = upload_files(identifier)
+        blocks = spectrum_import.discover_blocks(spectrum_import.load_workbook_data(raw, filename))
+        matching = [block for block in blocks if block["block_id"] == block_id]
+        if len(matching) != 1:
+            raise ValueError("所选扫描区域不存在，请重新上传并选择。")
+        parsed = spectrum_import.extract_spectrum(raw, filename, matching[0], well, require_color=False)
+        return Response(
+            spectrum_import.normalized_csv(parsed),
+            media_type="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="spectrum_{parsed["well"]}_{block_id[:8]}.csv"'},
+        )
+
     @app.get("/api/uploads/{identifier}/preview")
     def preview(
         identifier: str,

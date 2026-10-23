@@ -16,6 +16,23 @@ import colour
 import numpy as np
 
 
+def colour_band_indices(wavelengths) -> np.ndarray:
+    """Select the visible band and the nearest samples bracketing its edges.
+
+    Wavelengths outside this selection cannot contribute to the colour integral.
+    Keep a bracketing sample (e.g. 378 nm for a 4 nm scan) rather than extrapolate
+    an unmeasured 380 nm boundary.
+    """
+    waves = np.asarray(wavelengths, dtype=float)
+    selected = set(np.flatnonzero((waves >= 380) & (waves <= 780)).tolist())
+    lower, upper = np.flatnonzero(waves < 380), np.flatnonzero(waves > 780)
+    if len(lower) and not np.any(waves == 380):
+        selected.add(int(lower[-1]))
+    if len(upper) and not np.any(waves == 780):
+        selected.add(int(upper[0]))
+    return np.array(sorted(selected), dtype=int)
+
+
 def absorbance_to_color(wavelengths, absorbance) -> dict:
     """Convert a 380–780 nm spectrum under D65 / CIE 1931 2°.
 
@@ -33,8 +50,12 @@ def absorbance_to_color(wavelengths, absorbance) -> dict:
         or not np.all(np.isfinite(absorbance))
     ):
         raise ValueError("Provide equal-length, finite one-dimensional arrays")
+    if np.any(np.diff(wavelengths) <= 0):
+        raise ValueError("Wavelengths must be strictly increasing and unique")
+    selected = colour_band_indices(wavelengths)
+    wavelengths, absorbance = wavelengths[selected], absorbance[selected]
     gaps = np.diff(wavelengths)
-    if np.any(gaps <= 0) or np.any(gaps > 10):
+    if np.any(gaps > 10):
         raise ValueError(
             "Wavelengths must be increasing and unique, with gaps <= 10 nm"
         )

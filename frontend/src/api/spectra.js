@@ -1,4 +1,4 @@
-import { post, request } from "./client.js";
+import { apiUrl, post, request } from "./client.js";
 
 export const spectraApi = {
   upload(file, options) {
@@ -7,5 +7,6 @@ export const spectraApi = {
     return request("/uploads", { ...options, method: "POST", body });
   },
   extract: (id, selection, options) =>
-    post(`/uploads/${encodeURIComponent(id)}/spectrum`, selection, options),
+    post(`/uploads/${encodeURIComponent(id)}/prepare`, selection, options),
+  normalizedUrl: (id, block, well) => apiUrl(`/uploads/${encodeURIComponent(id)}/spectrum.csv?${new URLSearchParams({ block_id: block.block_id, well })}`),
 };

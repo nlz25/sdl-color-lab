@@ -51,6 +51,16 @@ h1, h2, h3, p { margin: 0; }
 .spectrum-preview .swatch { width: 17px; height: 17px; }
 .spectrum-preview small { color: #8b959a; font-size: 9px; display: block; line-height: 1.7; }
 .spectrum-preview b { font-weight: 600; }
+.measurement-requirements { display: flex; flex-wrap: wrap; gap: 7px 20px; margin: 15px 0 24px; padding: 12px 0; border-top: 1px solid #e6edef; border-bottom: 1px solid #e6edef; color: #71808a; font-size: 11px; line-height: 1.7; }
+.measurement-requirements b { color: #4d626e; font-weight: 500; }
+.measurement-requirements small { width: 100%; color: #8b959a; font-size: 10px; }
+.scan-selector { display: grid; gap: 7px; color: #6d7d88; margin: 13px 0; font-size: 11px; }
+.scan-selector select { width: 100%; }
+.spectrum-warning { grid-column: 1 / -1; margin: 13px 0 0; font-size: 11px; color: #8c6545; line-height: 1.7; }
+.spectrum-warning > small { display: block; margin-top: 6px; }
+.spectrum-warning .error { margin: 6px 0; }
+.normalized-download { font-size: 11px; }
+.compact .spectrum-preview { flex-wrap: wrap; }
 .target-form { display: flex; gap: 28px; align-items: flex-end; }
 .colour-picker { display: flex; align-items: center; gap: 10px; font-size: 12px; padding-bottom: 4px; white-space: nowrap; }
 .colour-picker input { appearance: none; width: 39px; height: 39px; padding: 0; border: 0; border-radius: 50%; overflow: hidden; background: transparent; cursor: pointer; }

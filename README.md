@@ -48,7 +48,9 @@ The initial and feedback prompts are in **English**, independently of the page l
 
 Set the target colour and start directly. Upload a spectrum only after a candidate has been mixed and measured. Uploaded absorbance is converted as provided; the page does not subtract a blank.
 
-**Spectrum format.** Use one UTF-8 CSV per spectrum, with two columns:
+**Measurement settings.** The organiser's example identifies a **Tecan Infinite 200 Pro**, running **i-control 2.0.10.0**. Request **380–780 nm**, preferably at **5 nm intervals**; a 1 nm scan is optional. This range is the project's fixed colour calculation convention, not a universal requirement for all colourimetry.
+
+**Spectrum format.** Upload the original `.xlsx`/`.xls` workbook, Tecan multi-well CSV, or a two-column UTF-8 CSV:
 
 ```csv
 Wavelength(nm),OD Value
@@ -56,9 +58,11 @@ Wavelength(nm),OD Value
 381,0.17839566290272532
 ```
 
-This illustrates the structure only. The full upload must cover **380–780 nm**, with increasing, unique wavelengths, gaps no larger than **10 nm**, and valid non-negative absorbance values. A 1 nm scan matches the supplied examples. The alternative header `wavelength_nm,absorbance` is also accepted. A complete example is [base_Blue.csv](backend/src/sdl_color_lab/resources/data/base_Blue.csv); red and green examples are in the same folder.
+The page extracts the current well automatically. Select a scan only if several regions contain that well. Tecan CSV files may use semicolons and decimal commas; preprocessing handles these without manual editing. The alternative two-column header `wavelength_nm,absorbance` is also accepted. A complete example is [base_Blue.csv](backend/src/sdl_color_lab/resources/data/base_Blue.csv).
 
-The current page accepts this CSV format. If the organiser provides a different export, obtain an actual sample for adaptation before the experiment.
+For colour calculation, measured points must cover **380–780 nm**, in increasing order without duplicates and with gaps no larger than **10 nm** in the colour integration band. Nearby boundary samples are retained for interpolation. Explicit `OVER` readings outside that band are excluded and recorded; missing, negative or overflow values inside it block colour calculation. No blank subtraction or missing-band extrapolation is applied. The page shows the actual scan range and step and offers a **preprocessed spectrum CSV** download. Incomplete examples can be normalized but cannot finish an experimental round.
+
+To normalize all wells outside the browser, use the installed backend environment: `python -m sdl_color_lab.spectra.preprocess INPUT --out-dir OUTPUT`. Optional `--sheet NAME` and `--well A1` select a scan or well. Outputs include per-well CSV files and `summary.csv` with source hashes, measured ranges and colour readiness. Different existing output files are never overwritten.
 
 **Start.** Choose **GPT-6** or **BO-EI**, set the target RGB (default **143, 150, 106**), then click **Start [method] · 6 rounds**. The page automatically assigns an experiment ID and candidate wells. The model and initial settings are fixed for this experiment. Restoring an experiment retains its current model, original calibration, recipes and history.
 

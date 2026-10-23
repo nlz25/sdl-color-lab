@@ -6,6 +6,7 @@ import MethodPicker from "../../components/MethodPicker.jsx";
 import OpentronsDownloads from "../../components/OpentronsDownloads.jsx";
 import { METHODS } from "../../domain/experiment.js";
 import { useInitialization } from "./useInitialization.js";
+import MeasurementRequirements from "../spectra/MeasurementRequirements.jsx";
 
 export default function SetupPage({ bootstrap, onCreated }) {
   const { t } = useI18n();
@@ -14,6 +15,7 @@ export default function SetupPage({ bootstrap, onCreated }) {
     <div className="section-heading"><div><h1>{t("setup.title")}</h1><p>{t("setup.subtitle")}</p></div>
     </div>
     <p className="micro cold-start-note">{t("setup.coldStart")}</p>
+    <MeasurementRequirements />
     <MethodPicker method={method} onChange={setMethod} disabled={Boolean(working)} />
     <div className="setup-section"><span className="eyebrow">{t("setup.targetSection")}</span>
       <div className="target-form">

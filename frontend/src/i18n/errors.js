@@ -1,6 +1,7 @@
 import { messages, translate } from "./messages.js";
 
 const rules = [
+  [/CSV 须包含波长|仅支持.*(?:xlsx|xls)/, "error.spectrumFormat"],
   [/请上传只有波长、吸光度两列的单孔 CSV/, "error.singleCsv"],
   [/请上传两列光谱 CSV/, "error.csvFormat"],
   [/上传文件为空/, "error.empty"],
