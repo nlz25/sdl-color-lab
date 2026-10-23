@@ -36,7 +36,9 @@ def colour_band_indices(wavelengths) -> np.ndarray:
 def absorbance_to_color(wavelengths, absorbance) -> dict:
     """Convert a 380–780 nm spectrum under D65 / CIE 1931 2°.
 
-    Wavelengths must be increasing, unique, and at most 10 nm apart.
+    Wavelengths must be increasing and unique. Any positive or variable spacing
+    is linearly interpolated onto the shared 1 nm integration grid; interpolation
+    does not recover spectral detail absent from coarse measurements.
     RGB is clipped/rounded for display; Lab preserves the measured colour.
     """
     wavelengths = np.asarray(wavelengths, dtype=float)
@@ -54,11 +56,6 @@ def absorbance_to_color(wavelengths, absorbance) -> dict:
         raise ValueError("Wavelengths must be strictly increasing and unique")
     selected = colour_band_indices(wavelengths)
     wavelengths, absorbance = wavelengths[selected], absorbance[selected]
-    gaps = np.diff(wavelengths)
-    if np.any(gaps > 10):
-        raise ValueError(
-            "Wavelengths must be increasing and unique, with gaps <= 10 nm"
-        )
     if wavelengths[0] > 380 or wavelengths[-1] < 780:
         raise ValueError("Spectrum must cover the complete 380–780 nm range")
     if np.any(absorbance < 0):

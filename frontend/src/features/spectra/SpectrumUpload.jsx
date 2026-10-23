@@ -10,7 +10,7 @@ import { useSpectrumSelection } from "./useSpectrumSelection.js";
 export default function SpectrumUpload({ title, name, expectedWell, defaultWell, target, onReady, disabled, compact = false }) {
   const { t } = useI18n();
   const fileRef = useRef(null);
-  const { upload, spectrum, blocks, block, selectedBlockId, selectBlock, normalizedUrl, working, error, uploadFile } = useSpectrumSelection({ expectedWell, defaultWell, target, onReady });
+  const { upload, spectrum, blocks, selectedBlockId, selectBlock, normalizedUrl, working, error, uploadFile } = useSpectrumSelection({ expectedWell, defaultWell, target, onReady });
   const display = spectrum?.color?.rgb;
   return <div className={"upload-box " + (compact ? "compact " : "") + (spectrum ? "has-spectrum" : "")}>
     <div className="upload-heading">

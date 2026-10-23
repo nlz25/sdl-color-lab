@@ -434,9 +434,6 @@ def _validated_color(wavelengths: list[float], absorbance: list[float]) -> dict:
     if any(gap <= 0 for gap in gaps):
         raise ValueError("波长必须严格递增且不能重复；请检查扫描区域和排列方向。")
     band = colour_band_indices(wavelengths)
-    band_waves = [wavelengths[index] for index in band]
-    if any(right - left > 10 for left, right in zip(band_waves, band_waves[1:])):
-        raise ValueError("实测波长间距不能超过 10 nm。")
     if wavelengths[0] > 380 or wavelengths[-1] < 780:
         raise ValueError("光谱必须完整覆盖 380–780 nm。")
     if any(absorbance[index] < 0 for index in band):
@@ -581,8 +578,12 @@ def extract_spectrum(
         "acquired_at": acquired_at,
         "sample_count": len(wavelengths),
         "wavelength_range_nm": [wavelengths[0], wavelengths[-1]],
-        "sampling_interval_nm": gaps[0] if len(set(gaps)) == 1 else None,
-        "max_sampling_interval_nm": max(gaps),
+        "sampling_interval_nm": (
+            float(format((original_range[1] - original_range[0]) / (original_count - 1), ".12g"))
+            if all(math.isclose(gap, gaps[0], rel_tol=1e-8, abs_tol=1e-8) for gap in gaps)
+            else None
+        ),
+        "max_sampling_interval_nm": float(format(max(gaps), ".12g")),
     }
 
 

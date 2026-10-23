@@ -7,7 +7,6 @@ const rules = [
   [/上传文件为空/, "error.empty"],
   [/超过 25 MB/, "error.large"],
   [/完整覆盖.*380.*780|Spectrum must cover the complete/, "error.range"],
-  [/波长间距不能超过|wavelength.*(?:gap|spacing).*10|Wavelength spacing/i, "error.spacing"],
   [/严格递增|不能重复|Wavelengths must be strictly/i, "error.order"],
   [/缺失或不是有效数字|不是有效数字|必须是有限数值|NaN|无穷大|finite one-dimensional arrays/, "error.numeric"],
   [/吸光度包含负值/, "error.negative"],

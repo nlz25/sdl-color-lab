@@ -7,6 +7,5 @@ export default function MeasurementRequirements() {
     <span>{t("measurement.reader")}: <b>Tecan Infinite 200 Pro</b></span>
     <span>{t("measurement.scanRange")}: <b>380–780 nm</b></span>
     <span>{t("measurement.scanStep")}: <b>{t("measurement.stepValue")}</b></span>
-    <small>{t("measurement.rangeNote")}</small>
   </div>;
 }

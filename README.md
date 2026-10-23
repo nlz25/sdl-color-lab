@@ -48,7 +48,7 @@ The initial and feedback prompts are in **English**, independently of the page l
 
 Set the target colour and start directly. Upload a spectrum only after a candidate has been mixed and measured. Uploaded absorbance is converted as provided; the page does not subtract a blank.
 
-**Measurement settings.** The organiser's example identifies a **Tecan Infinite 200 Pro**, running **i-control 2.0.10.0**. Request **380–780 nm**, preferably at **5 nm intervals**; a 1 nm scan is optional. This range is the project's fixed colour calculation convention, not a universal requirement for all colourimetry.
+**Measurement settings.** Use **Tecan Infinite 200 Pro**, scan **380–780 nm**, with **1–5 nm intervals recommended**.
 
 **Spectrum format.** Upload the original `.xlsx`/`.xls` workbook, Tecan multi-well CSV, or a two-column UTF-8 CSV:
 
@@ -60,7 +60,9 @@ Wavelength(nm),OD Value
 
 The page extracts the current well automatically. Select a scan only if several regions contain that well. Tecan CSV files may use semicolons and decimal commas; preprocessing handles these without manual editing. The alternative two-column header `wavelength_nm,absorbance` is also accepted. A complete example is [base_Blue.csv](backend/src/sdl_color_lab/resources/data/base_Blue.csv).
 
-For colour calculation, measured points must cover **380–780 nm**, in increasing order without duplicates and with gaps no larger than **10 nm** in the colour integration band. Nearby boundary samples are retained for interpolation. Explicit `OVER` readings outside that band are excluded and recorded; missing, negative or overflow values inside it block colour calculation. No blank subtraction or missing-band extrapolation is applied. The page shows the actual scan range and step and offers a **preprocessed spectrum CSV** download. Incomplete examples can be normalized but cannot finish an experimental round.
+For colour calculation, measured points must cover **380–780 nm**, in increasing order without duplicates. Any positive fixed step, including fractional steps, or nonuniform spacing is accepted. Absorbance is linearly interpolated onto the common 1 nm calculation grid; coarse measurements can miss spectral detail even after interpolation. Nearby boundary samples are retained. Explicit `OVER` readings outside the required band are excluded and recorded; missing, negative or overflow values inside it block colour calculation. No blank subtraction or missing-band extrapolation is applied. The page shows the measured range and step and offers a **preprocessed spectrum CSV** download. Incomplete examples can be normalized but cannot finish an experimental round.
+
+**Synthetic upload example.** [Excel](examples/Absorbancescan_virtual.xlsx) and [CSV](examples/Absorbancescan_virtual.csv) follow the organiser's export layout: rows A1–B12, wavelengths across columns, complete **380–780 nm at 1 nm**. The workbook keeps the metadata/header positions; the CSV uses semicolons and decimal commas. These are deterministic, smooth synthetic spectra for testing file import and colour conversion, independent of any generated recipe. They are not instrument measurements or evidence of model performance. Upload either file to test the current well.
 
 To normalize all wells outside the browser, use the installed backend environment: `python -m sdl_color_lab.spectra.preprocess INPUT --out-dir OUTPUT`. Optional `--sheet NAME` and `--well A1` select a scan or well. Outputs include per-well CSV files and `summary.csv` with source hashes, measured ranges and colour readiness. Different existing output files are never overwritten.
 
